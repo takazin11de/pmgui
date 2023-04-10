@@ -12,7 +12,8 @@ PmGui pmgui;
 
 const PmObj pm_event_obj = {sizeof(PmEvent), NULL, NULL, NULL};
 
-void PmGui_Init() {
+void PmGui_Init()
+{
   setvbuf(stdout, NULL, _IONBF, 0);
 
   pmgui.str_void = utf8to16(NULL, "");
@@ -39,57 +40,48 @@ void PmGui_Init() {
   pmgui.wndclass.lpszMenuName = NULL;
   pmgui.wndclass.lpszClassName = pmgui.wnd_class_name;
 
-  if (!RegisterClassW(&pmgui.wndclass)) {
+  if (!RegisterClassW(&pmgui.wndclass))
+  {
     exit(1);
   }
   pmgui.hidden_hwnd = CreateWindowW(pmgui.wnd_class_name, pmgui.str_void, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
                                     CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, NULL, pmgui.instance, NULL);
 }
 
-int PmGui_ListenEvent() {
+int PmGui_ListenEvent()
+{
   MSG msg;
-  while (GetMessageW(&msg, NULL, 0, 0)) {
+  while (GetMessageW(&msg, NULL, 0, 0))
+  {
     TranslateMessage(&msg);
     DispatchMessageW(&msg);
   }
   return (msg.wParam);
 }
 
-LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+{
   PmListIt it;
-  PmEvent* tmp_event;
+  PmEvent *tmp_event;
   PmEvent event;
   HWND child_hwnd;
   UINT_PTR timer_id;
   int f_list = 1;
-  switch (msg) {
-    case WM_DESTROY:
-      PostQuitMessage(0);
-      break;
+  switch (msg)
+  {
+  case WM_DESTROY:
+    PostQuitMessage(0);
+    break;
 
-    case WM_COMMAND:
-      child_hwnd = (HWND)lparam;
-      // pme_onclick
-      if (HIWORD(wparam) == BN_CLICKED) {
-        for_PmList(pmgui.event_list, &it, tmp_event) {
-          if (tmp_event->widget->hwnd == child_hwnd && tmp_event->type == pme_clicked) {
-            event.type = tmp_event->type;
-            event.func = tmp_event->func;
-            event.widget = tmp_event->widget;
-            event.data = tmp_event->data;
-            return event.func(&event);
-          }
-        }
-        return (DefWindowProcW(hwnd, msg, wparam, lparam));
-
-      } else {
-        return (DefWindowProcW(hwnd, msg, wparam, lparam));
-      }
-      break;
-    case WM_TIMER:
-      timer_id = wparam;
-      for_PmList(pmgui.event_list, &it, tmp_event) {
-        if (tmp_event->widget->timer_id == timer_id && tmp_event->type == pme_timer) {
+  case WM_COMMAND:
+    child_hwnd = (HWND)lparam;
+    // pme_onclick
+    if (HIWORD(wparam) == BN_CLICKED)
+    {
+      for_PmList(pmgui.event_list, &it, tmp_event)
+      {
+        if (tmp_event->widget->hwnd == child_hwnd && tmp_event->type == pme_clicked)
+        {
           event.type = tmp_event->type;
           event.func = tmp_event->func;
           event.widget = tmp_event->widget;
@@ -98,43 +90,84 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
         }
       }
       return (DefWindowProcW(hwnd, msg, wparam, lparam));
-      break;
-
-    case WM_PAINT:
-      for_PmList(pmgui.event_list, &it, tmp_event) {
-        if (tmp_event->widget->hwnd == hwnd && tmp_event->type == pme_env_paint) {
-          event.type = tmp_event->type;
-          event.func = tmp_event->func;
-          event.widget = tmp_event->widget;
-          event.data = tmp_event->data;
-          return event.func(&event);
-        }
+    }
+    else
+    {
+      return (DefWindowProcW(hwnd, msg, wparam, lparam));
+    }
+    break;
+  case PM_WM_RADIO_GROUP_CLICKED:
+    // pme_onclick
+    for_PmList(pmgui.event_list, &it, tmp_event)
+    {
+      if (tmp_event->widget->type == pmw_radiobox_group && tmp_event->type == pme_clicked)
+      {
+        event.type = tmp_event->type;
+        event.func = tmp_event->func;
+        event.widget = tmp_event->widget;
+        event.data = tmp_event->data;
+        return event.func(&event);
       }
-      return (DefWindowProcW(hwnd, msg, wparam, lparam));
-      break;
+    }
 
-    default:
-      return (DefWindowProcW(hwnd, msg, wparam, lparam));
+    break;
+  case WM_TIMER:
+    timer_id = wparam;
+    for_PmList(pmgui.event_list, &it, tmp_event)
+    {
+      if (tmp_event->widget->timer_id == timer_id && tmp_event->type == pme_timer)
+      {
+        event.type = tmp_event->type;
+        event.func = tmp_event->func;
+        event.widget = tmp_event->widget;
+        event.data = tmp_event->data;
+        return event.func(&event);
+      }
+    }
+    return (DefWindowProcW(hwnd, msg, wparam, lparam));
+    break;
+
+  case WM_PAINT:
+    for_PmList(pmgui.event_list, &it, tmp_event)
+    {
+      if (tmp_event->widget->hwnd == hwnd && tmp_event->type == pme_env_paint)
+      {
+        event.type = tmp_event->type;
+        event.func = tmp_event->func;
+        event.widget = tmp_event->widget;
+        event.data = tmp_event->data;
+        return event.func(&event);
+      }
+    }
+    return (DefWindowProcW(hwnd, msg, wparam, lparam));
+    break;
+
+  default:
+    return (DefWindowProcW(hwnd, msg, wparam, lparam));
   }
   return (0);
 }
 
-int PmEvent_Bind(int event_type, PmEvent_Callback function, PmWidget widgets, void* data) {
+int PmEvent_Bind(int event_type, PmEvent_Callback function, PmWidget widgets, void *data)
+{
   PmEvent event;
   event.type = event_type;
   event.func = function;
   event.widget = widgets;
   event.data = data;
   PmListIt it;
-  PmEvent* tmp;
+  PmEvent *tmp;
   int f_list = 1;
-  for_PmList(pmgui.event_list, &it, tmp) {
-    if (tmp->widget == widgets && tmp->type == event_type) {
+  for_PmList(pmgui.event_list, &it, tmp)
+  {
+    if (tmp->widget == widgets && tmp->type == event_type)
+    {
       f_list = 0;
       break;
     }
   }
-  if (f_list) {
+  if (f_list)
+  {
     PmList_PushFront(pmgui.event_list, &event);
   }
 
